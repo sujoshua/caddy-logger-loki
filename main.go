@@ -32,7 +32,7 @@ type LokiLog struct {
 
 	/*
 	  Custom HTTP headers to be sent along with each push request.
-	  Be aware that headers that are set by this writer itself (e.g. X-Scope-OrgID) can't be overwritten.
+	  Be aware that headers that are set by this writer itself (e.g. X-Scope-OrgID) can'T be overwritten.
 
 	  Example: CF-Access-Client-Id: xxx
 	  [ <labelname>: <labelvalue> ... ]
@@ -48,10 +48,10 @@ type LokiLog struct {
 
 	/*
 	  Maximum amount of time to wait before sending a batch, even if that
-	  batch isn't full.
+	  batch isn'T full.
 	  default = 1s
 	*/
-	BatchWait time.Duration `json:"batchwait,omitempty"`
+	BatchWait StrTimeDuration `json:"batchwait,omitempty"`
 
 	/*
 	  Maximum batch size (in bytes) of logs to accumulate before sending
@@ -102,7 +102,7 @@ type LokiLog struct {
 	Labels map[string]string `json:"labels,omitempty"`
 
 	// Maximum time to wait for a server to respond to a request, default is 10s
-	TimeOut time.Duration `json:"timeout,omitempty"`
+	TimeOut StrTimeDuration `json:"timeout,omitempty"`
 
 	// loki client config
 	clientConfig client.Config
@@ -128,10 +128,10 @@ type LokiLog struct {
 
 type BackoffConfig struct {
 	// Initial backoff time between retries, default is 500ms
-	MinPeriod time.Duration `json:"min_period,omitempty"`
+	MinPeriod StrTimeDuration `json:"min_period,omitempty"`
 
 	// Maximum backoff time between retries, default is 5m
-	MaxPeriod time.Duration `json:"max_period,omitempty"`
+	MaxPeriod StrTimeDuration `json:"max_period,omitempty"`
 
 	// Maximum number of retries to do, default is 10
 	MaxRetries int `json:"max_retries,omitempty"`
@@ -238,11 +238,10 @@ func (l *LokiLog) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return d.ArgErr()
 			}
 			v := d.Val()
-			dur, err := time.ParseDuration(v)
+			err := l.BatchWait.FromString(v)
 			if err != nil {
 				return fmt.Errorf("parse batchwait parameter failed, invalid duration: %v", err)
 			}
-			l.BatchWait = dur
 		case "batchsize":
 			if !d.NextArg() {
 				return d.ArgErr()
@@ -371,21 +370,19 @@ func (l *LokiLog) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 						return d.ArgErr()
 					}
 					v := d.Val()
-					dur, err := time.ParseDuration(v)
+					err := l.BackoffConfig.MinPeriod.FromString(v)
 					if err != nil {
 						return fmt.Errorf("parse min_period parameter failed, invalid duration: %v", err)
 					}
-					l.BackoffConfig.MinPeriod = dur
 				case "max_period":
 					if !d.NextArg() {
 						return d.ArgErr()
 					}
 					v := d.Val()
-					dur, err := time.ParseDuration(v)
+					err := l.BackoffConfig.MaxPeriod.FromString(v)
 					if err != nil {
 						return fmt.Errorf("parse max_period parameter failed, invalid duration: %v", err)
 					}
-					l.BackoffConfig.MaxPeriod = dur
 				case "max_retries":
 					if !d.NextArg() {
 						return d.ArgErr()
@@ -439,11 +436,10 @@ func (l *LokiLog) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return d.ArgErr()
 			}
 			v := d.Val()
-			dur, err := time.ParseDuration(v)
+			err := l.TimeOut.FromString(v)
 			if err != nil {
 				return fmt.Errorf("parse timeout parameter failed, invalid duration: %v", err)
 			}
-			l.TimeOut = dur
 		}
 	}
 	return nil
@@ -466,16 +462,16 @@ func (l *LokiLog) Validate() error {
 		return fmt.Errorf("labels is nil, at least one label is required")
 	}
 
-	if l.BatchWait == 0 {
-		l.BatchWait = 1 * time.Second
+	if l.BatchWait.T == 0 {
+		l.BatchWait.T = 1 * time.Second
 	}
 
 	if l.BatchSize == 0 {
 		l.BatchSize = 1048576
 	}
 
-	if l.TimeOut == 0 {
-		l.TimeOut = 10 * time.Second
+	if l.TimeOut.T == 0 {
+		l.TimeOut.T = 10 * time.Second
 	}
 
 	var proxyURL *url.URL
@@ -489,15 +485,15 @@ func (l *LokiLog) Validate() error {
 	if l.BackoffConfig.MaxRetries == 0 {
 		l.BackoffConfig.MaxRetries = 10
 	}
-	if l.BackoffConfig.MinPeriod == 0 {
-		l.BackoffConfig.MinPeriod = 500 * time.Millisecond
+	if l.BackoffConfig.MinPeriod.T == 0 {
+		l.BackoffConfig.MinPeriod.T = 500 * time.Millisecond
 	}
-	if l.BackoffConfig.MaxPeriod == 0 {
-		l.BackoffConfig.MaxPeriod = 5 * time.Minute
+	if l.BackoffConfig.MaxPeriod.T == 0 {
+		l.BackoffConfig.MaxPeriod.T = 5 * time.Minute
 	}
 	backoffConfig := backoff.Config{
-		MinBackoff: l.BackoffConfig.MinPeriod,
-		MaxBackoff: l.BackoffConfig.MaxPeriod,
+		MinBackoff: l.BackoffConfig.MinPeriod.TimeDuration(),
+		MaxBackoff: l.BackoffConfig.MaxPeriod.TimeDuration(),
 		MaxRetries: l.BackoffConfig.MaxRetries,
 	}
 
@@ -513,7 +509,7 @@ func (l *LokiLog) Validate() error {
 	l.clientConfig = client.Config{
 		Name:      name,
 		URL:       u2,
-		BatchWait: l.BatchWait,
+		BatchWait: l.BatchWait.TimeDuration(),
 		BatchSize: l.BatchSize,
 		Client: config.HTTPClientConfig{
 			BasicAuth:       basicAuth,
@@ -527,7 +523,7 @@ func (l *LokiLog) Validate() error {
 		},
 		Headers:                l.Headers,
 		BackoffConfig:          backoffConfig,
-		Timeout:                l.TimeOut,
+		Timeout:                l.TimeOut.TimeDuration(),
 		TenantID:               l.TenantId,
 		DropRateLimitedBatches: l.DropRateLimitedBatches,
 	}
