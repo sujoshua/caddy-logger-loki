@@ -4,13 +4,13 @@ A plugin of caddy to push log directly to loki without promtail and parameters a
 
 ## Usage
 ### parameters:
-Most of the parameters are same as promtail client, so you can check [promtail client doc](https://grafana.com/docs/loki/latest/send-data/promtail/configuration/#clients) as well. 
+Most of the parameters are same as promtail client, so you can check [promtail client doc](https://grafana.com/docs/loki/latest/send-data/promtail/configuration/#clients) as well.
 
 different parameters are:
 
-| parameter | type | description                                                                                                                                                                                                                                                                                                                                                                   | default |
-|:---------:|:----:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------:|
-| `labels`  | map  | Static labels to add to all logs being sent to Loki.  Use map like {"foo": "bar"} to add a label foo with value bar. Unlike Promtail, you **MUST** set at least one label, because plugin won't add any.  It's actually is `external_labels` filed in promtail, but we can't set labels in cmd, it's the only way to add labels, so there shouldn't have concept of external. |    -    |
+| parameter | type | description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | default |
+|:---------:|:----:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------:|
+| `labels`  | map  | Static labels to add to all logs being sent to Loki.  Use map like {"foo": "bar"} to add a label foo with value bar. Support caddy all [placeholders](https://caddyserver.com/docs/conventions#placeholders) except http related. Unlike Promtail, you **MUST** set at least one label, because plugin won't add any.  It's actually is `external_labels` filed in promtail, but we can't set labels in cmd, it's the only way to add labels, so there shouldn't have concept of external. |    -    |
 
 same parameters are:
 

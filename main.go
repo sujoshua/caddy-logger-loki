@@ -505,7 +505,6 @@ func (l *LokiLog) Validate() error {
 	if l.Oauth2 != nil {
 		oauth2 = l.Oauth2.ToPrometheusOAuth2()
 	}
-
 	l.clientConfig = client.Config{
 		Name:      name,
 		URL:       u2,
@@ -547,6 +546,11 @@ func (l *LokiLog) OpenWriter() (io.WriteCloser, error) {
 		return nil, err
 	}
 
+	// do placeholder replacement
+	r := caddy.NewReplacer()
+	for k, v := range l.Labels {
+		l.Labels[k] = r.ReplaceAll(v, "")
+	}
 	writer := newLokiWriter(c, l.logger, l.Labels)
 
 	return writer, nil
